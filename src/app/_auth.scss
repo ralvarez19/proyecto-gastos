@@ -1,0 +1,142 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  color: #15251f;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top left, #dcefe7, transparent 38%),
+    linear-gradient(145deg, #f8fbf9, #edf5f1);
+}
+
+.auth-card {
+  width: min(430px, 100%);
+  box-sizing: border-box;
+  background: white;
+  border: 1px solid #dde7e2;
+  border-radius: 26px;
+  padding: 34px;
+  box-shadow: 0 24px 70px rgba(20, 60, 45, 0.14);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 30px;
+}
+.auth-brand > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #176b56;
+  color: white;
+  font-size: 20px;
+  font-weight: 900;
+}
+.auth-brand > img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+.auth-brand strong,
+.auth-brand small {
+  display: block;
+}
+.auth-brand strong {
+  font-size: 20px;
+}
+.auth-brand small,
+.auth-note,
+.auth-card > p {
+  color: #687770;
+}
+.auth-card h1 {
+  font-size: 30px;
+  margin: 0;
+}
+.auth-card > p {
+  margin: 8px 0 20px;
+}
+.auth-submit,
+.google-button,
+.register-button {
+  width: 100%;
+  margin-top: 10px;
+}
+.register-button {
+  background: #e7f3ee;
+  color: #176b56;
+  border-color: #d6e9e1;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #687770;
+  margin: 18px 0 8px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  background: #dde7e2;
+  flex: 1;
+}
+.auth-error {
+  background: #fff0ef;
+  color: #a32929;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 13px;
+}
+.auth-note {
+  display: block;
+  text-align: center;
+  margin-top: 22px;
+  line-height: 1.4;
+}
+.auth-loading {
+  text-align: center;
+  color: #687770;
+}
+.auth-spinner {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  border: 4px solid #cfe3db;
+  border-top-color: #176b56;
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+}
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.logout {
+  background: transparent;
+}
+.sync.sync-error {
+  background: #fff0ef;
+  color: #a32929;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 650px) {
+  .auth-card {
+    padding: 25px 20px;
+  }
+  .header-actions .logout {
+    display: inline-flex;
+  }
+}

@@ -1,0 +1,722 @@
+@if (!auth.ready()) {
+  <div class="auth-page">
+    <div class="auth-loading">
+      <span class="auth-spinner"></span>
+      <p>Conectando con Firebase…</p>
+    </div>
+  </div>
+} @else if (!auth.user()) {
+  <div class="auth-page">
+    <section class="auth-card">
+      <div class="auth-brand">
+        <img src="obraflow-mark.png" alt="ObraFlow" />
+        <div><strong>ObraFlow</strong><small>Control de construcción</small></div>
+      </div>
+      <h1>Bienvenido</h1>
+      <p>Ingresa para administrar tus proyectos y gastos.</p>
+      <form (ngSubmit)="signIn()">
+        <label
+          >Correo electrónico<input
+            type="email"
+            autocomplete="email"
+            required
+            [(ngModel)]="loginEmail"
+            name="loginEmail"
+            placeholder="nombre@empresa.com"
+        /></label>
+        <label
+          >Contraseña<input
+            type="password"
+            autocomplete="current-password"
+            required
+            minlength="6"
+            [(ngModel)]="loginPassword"
+            name="loginPassword"
+            placeholder="Mínimo 6 caracteres"
+        /></label>
+        @if (authError) {
+          <div class="auth-error">{{ authError }}</div>
+        }
+        <button class="primary auth-submit" type="submit" [disabled]="authLoading">
+          {{ authLoading ? 'Procesando…' : 'Ingresar' }}
+        </button>
+        <button
+          type="button"
+          class="google-button"
+          [disabled]="authLoading"
+          (click)="signInWithGoogle()"
+        >
+          G&nbsp;&nbsp; Continuar con Google
+        </button>
+        <div class="auth-divider"><span>o</span></div>
+        <button type="button" class="register-button" [disabled]="authLoading" (click)="register()">
+          Crear una cuenta
+        </button>
+      </form>
+      <small class="auth-note"
+        >La sesión es administrada de forma segura por Firebase Authentication.</small
+      >
+    </section>
+  </div>
+} @else {
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <img src="obraflow-mark.png" alt="ObraFlow" />
+        <div>ObraFlow<small>Control de construcción</small></div>
+      </div>
+      <nav>
+        <button [class.active]="tab === 'inicio'" (click)="tab = 'inicio'">
+          ⌂ <span>Inicio</span>
+        </button>
+        <button [class.active]="tab === 'proyectos'" (click)="tab = 'proyectos'">
+          ▣ <span>Proyectos</span>
+        </button>
+        <button [class.active]="tab === 'gastos'" (click)="tab = 'gastos'">
+          ＄ <span>Gastos</span>
+        </button>
+        <button [class.active]="tab === 'proveedores'" (click)="tab = 'proveedores'">
+          ◇ <span>Proveedores</span>
+        </button>
+        <button [class.active]="tab === 'reportes'" (click)="tab = 'reportes'">
+          ▥ <span>Reportes</span>
+        </button>
+        <button [class.active]="tab === 'mas'" (click)="tab = 'mas'">
+          ⚙ <span>Más / Parámetros</span>
+        </button>
+      </nav>
+      <div class="sync" [class.sync-error]="data.syncState() === 'error'">
+        ● {{ syncLabel }}<br /><small>{{
+          data.syncState() === 'error'
+            ? 'Revisa Firestore y sus reglas'
+            : 'Cuenta: ' + (auth.user()?.email || '')
+        }}</small>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <div>
+          <small>{{ auth.user()?.email }}</small>
+          <h1>{{ tab === 'inicio' ? 'Buenos días' : (tab | titlecase) }}</h1>
+        </div>
+        <div class="header-actions">
+          <button class="logout" (click)="signOut()">Cerrar sesión</button
+          ><button class="primary" (click)="openExpense()" [disabled]="!activeProjects.length">
+            ＋ Registrar gasto
+          </button>
+        </div>
+      </header>
+
+      @if (tab === 'inicio') {
+        <section class="heading">
+          <div>
+            <h2>Vista general</h2>
+            <p>Información financiera según el estado de los proyectos.</p>
+          </div>
+          <div class="segments">
+            <button [class.active]="filter === 'ACTIVE'" (click)="filter = 'ACTIVE'">Activos</button
+            ><button [class.active]="filter === 'PAUSED'" (click)="filter = 'PAUSED'">
+              Pausados</button
+            ><button [class.active]="filter === 'ALL'" (click)="filter = 'ALL'">Todos</button>
+          </div>
+        </section>
+        <section class="metrics">
+          <article>
+            <small>Presupuesto total</small><strong>{{ money(budget) }}</strong
+            ><span>{{ filteredProjects.length }} proyecto(s)</span>
+          </article>
+          <article>
+            <small>Gasto acumulado</small><strong>{{ money(spent) }}</strong
+            ><span>{{ visibleExpenses.length }} movimientos</span>
+          </article>
+          <article>
+            <small>IVA incluido</small><strong>{{ money(taxTotal) }}</strong
+            ><span>Impuesto registrado</span>
+          </article>
+          <article>
+            <small>Disponible</small><strong>{{ money(budget - spent) }}</strong
+            ><span>Saldo presupuestario</span>
+          </article>
+        </section>
+        <section class="panel">
+          <h3>
+            Proyectos {{ filter === 'ACTIVE' ? 'activos' : filter === 'PAUSED' ? 'pausados' : '' }}
+          </h3>
+          @for (project of filteredProjects; track project.id) {
+            <div class="project-row">
+              <div class="progress">{{ project.progress * 100 | number: '1.0-0' }}%</div>
+              <div>
+                <b>{{ project.name }}</b
+                ><small>{{ project.location }}</small>
+              </div>
+              <div class="right">
+                <b>{{ money(projectSpent(project.id)) }}</b
+                ><small>de {{ money(project.budget) }}</small>
+              </div>
+            </div>
+          }
+          @if (!filteredProjects.length) {
+            <p class="empty">No hay proyectos con este estado.</p>
+          }
+        </section>
+      }
+
+      @if (tab === 'proyectos') {
+        <section class="heading">
+          <div>
+            <h2>Proyectos</h2>
+            <p>Crea, edita, pausa o reactiva tus obras.</p>
+          </div>
+          <button class="primary" (click)="openProject()">＋ Nuevo proyecto</button>
+        </section>
+        <section class="cards">
+          @for (project of projects; track project.id) {
+            <article class="project-card">
+              <div class="card-head">
+                <div>
+                  <h3>{{ project.name }}</h3>
+                  <p>{{ project.location || 'Sin ubicación' }}</p>
+                </div>
+                <span class="status" [class.paused]="project.status === 'PAUSED'">{{
+                  statusLabel(project.status)
+                }}</span>
+              </div>
+              <div class="triplet">
+                <span
+                  >Presupuesto<b>{{ money(project.budget) }}</b></span
+                ><span
+                  >Gastado<b>{{ money(projectSpent(project.id)) }}</b></span
+                ><span
+                  >Disponible<b>{{ money(project.budget - projectSpent(project.id)) }}</b></span
+                >
+              </div>
+              <div class="actions">
+                <button (click)="openProject(project)">Editar</button
+                ><button (click)="toggleProject(project)">
+                  {{ project.status === 'PAUSED' ? 'Reactivar' : 'Pausar' }}
+                </button>
+              </div>
+            </article>
+          }
+        </section>
+      }
+
+      @if (tab === 'gastos') {
+        <section class="heading expenses-heading">
+          <div>
+            <h2>Gastos</h2>
+            <p>Compras y movimientos de tus proyectos activos.</p>
+          </div>
+          <div class="expense-summary">
+            <span
+              ><small>Resultados</small><b>{{ filteredActiveExpenses.length }}</b></span
+            >
+            <span
+              ><small>IVA</small><b>{{ money(filteredExpenseTax) }}</b></span
+            >
+            <span class="summary-total"
+              ><small>Total</small><b>{{ money(filteredExpenseTotal) }}</b></span
+            >
+          </div>
+        </section>
+        <section class="expense-toolbar" aria-label="Filtros de gastos">
+          <label class="search-field">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              placeholder="Buscar artículo, factura, categoría o proveedor"
+              [(ngModel)]="expenseSearch"
+            />
+          </label>
+          <label class="project-filter">
+            <span>Proyecto</span>
+            <select [(ngModel)]="expenseProjectFilter">
+              <option value="ALL">Todos los activos</option>
+              @for (project of activeProjects; track project.id) {
+                <option [value]="project.id">{{ project.name }}</option>
+              }
+            </select>
+          </label>
+          <button class="primary toolbar-add" (click)="openExpense()">＋ Registrar gasto</button>
+        </section>
+        <section class="panel expense-panel table-wrap">
+          <table class="expense-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Compra</th>
+                <th>Factura / proveedor</th>
+                <th>Subtotal</th>
+                <th>IVA</th>
+                <th>Total</th>
+                <th class="actions-heading">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (expense of filteredActiveExpenses; track expense.id) {
+                <tr>
+                  <td class="expense-date">{{ expense.date | date: 'dd MMM yyyy' }}</td>
+                  <td class="expense-detail">
+                    <b>{{ expense.description }}</b>
+                    <div class="expense-tags">
+                      <span>{{ projectName(expense.projectId) }}</span>
+                      <span>{{ expense.category }}</span>
+                    </div>
+                  </td>
+                  <td class="invoice-cell">
+                    <b>{{ expense.invoiceNumber || 'Sin factura' }}</b>
+                    <small>{{ expense.provider || 'Sin proveedor' }}</small>
+                  </td>
+                  <td>{{ money(expense.subtotal) }}</td>
+                  <td>
+                    <span class="tax-pill">{{ expense.taxRate }}%</span> {{ money(expense.tax) }}
+                  </td>
+                  <td>
+                    <b class="expense-total">{{ money(expense.total) }}</b>
+                  </td>
+                  <td class="row-actions">
+                    <button
+                      class="action-icon edit-action"
+                      type="button"
+                      title="Editar gasto"
+                      aria-label="Editar gasto"
+                      (click)="openExpense(expense)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 20h4l10.5-10.5a2.12 2.12 0 0 0-3-3L5 17v3Z" />
+                        <path d="m14 8 3 3" />
+                      </svg>
+                    </button>
+                    <button
+                      class="action-icon delete-action"
+                      type="button"
+                      title="Eliminar gasto"
+                      aria-label="Eliminar gasto"
+                      (click)="deleteExpense(expense)"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7h16" />
+                        <path d="M9 7V4h6v3" />
+                        <path d="m6.5 7 1 13h9l1-13" />
+                        <path d="M10 11v5M14 11v5" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (!filteredActiveExpenses.length) {
+            <div class="empty-state">
+              <b>No encontramos gastos</b>
+              <span>Prueba otra búsqueda o registra un nuevo movimiento.</span>
+            </div>
+          }
+        </section>
+      }
+
+      @if (tab === 'reportes') {
+        <section class="heading">
+          <div>
+            <h2>Reporte mensual</h2>
+            <p>Resumen por categoría y detalle de cada artículo comprado.</p>
+          </div>
+          <label class="month-filter">Mes<input type="month" [(ngModel)]="reportMonth" /></label>
+        </section>
+        <section class="metrics">
+          <article>
+            <small>Facturas</small><strong>{{ monthlyInvoiceCount }}</strong>
+          </article>
+          <article>
+            <small>Artículos</small><strong>{{ monthlyExpenses.length }}</strong>
+          </article>
+          <article>
+            <small>IVA</small><strong>{{ money(monthlyTax) }}</strong>
+          </article>
+          <article>
+            <small>Total mensual</small><strong>{{ money(monthlyTotal) }}</strong>
+          </article>
+        </section>
+        <section class="settings-grid report-grid">
+          <article class="panel">
+            <h3>Resumen por categoría</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of monthlyCategorySummary; track item.category) {
+                  <tr>
+                    <td>{{ item.category }}</td>
+                    <td>
+                      <b>{{ money(item.total) }}</b>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </article>
+          <article class="panel table-wrap">
+            <h3>Detalle de facturas y compras</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Factura</th>
+                  <th>Fecha</th>
+                  <th>Artículo</th>
+                  <th>Cant.</th>
+                  <th>Subtotal</th>
+                  <th>IVA</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (expense of monthlyExpenses; track expense.id) {
+                  <tr>
+                    <td>{{ expense.invoiceNumber || 'Sin factura' }}</td>
+                    <td>{{ expense.date }}</td>
+                    <td>
+                      <b>{{ expense.description }}</b
+                      ><small>{{ expense.category }} · {{ expense.provider }}</small>
+                    </td>
+                    <td>{{ expense.quantity }}</td>
+                    <td>{{ money(expense.subtotal) }}</td>
+                    <td>{{ money(expense.tax) }}</td>
+                    <td>
+                      <b>{{ money(expense.total) }}</b>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </article>
+        </section>
+        <section class="panel export">
+          <h3>Exportar información</h3>
+          <p>
+            Los archivos incluyen resumen por proyecto/categoría y detalle por factura y artículo.
+          </p>
+          <div>
+            <button (click)="exportPdf()">▧ Exportar PDF</button
+            ><button class="primary" (click)="exportExcel()">▦ Exportar Excel</button>
+          </div>
+        </section>
+      }
+
+      @if (tab === 'proveedores') {
+        <section class="heading">
+          <div>
+            <h2>Proveedores</h2>
+            <p>Administra las empresas y personas disponibles al registrar un gasto.</p>
+          </div>
+          <button class="primary" (click)="openSupplier()">＋ Nuevo proveedor</button>
+        </section>
+        <section class="panel table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (supplier of suppliers; track supplier.id) {
+                <tr>
+                  <td>
+                    <b>{{ supplier.name }}</b>
+                  </td>
+                  <td>{{ supplier.contact || '—' }}</td>
+                  <td>{{ supplier.phone || '—' }}</td>
+                  <td>
+                    <button class="link" (click)="openSupplier(supplier)">Editar</button
+                    ><button class="danger link" (click)="deleteSupplier(supplier)">
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (!suppliers.length) {
+            <div class="empty-state">
+              <b>Aún no hay proveedores</b
+              ><span>El campo Proveedor quedará vacío al crear gastos hasta que agregues uno.</span>
+            </div>
+          }
+        </section>
+      }
+
+      @if (tab === 'mas') {
+        <section class="heading">
+          <div>
+            <h2>Parámetros</h2>
+            <p>Preferencias guardadas localmente en este navegador.</p>
+          </div>
+        </section>
+        <section class="settings-grid">
+          <article class="panel">
+            <h3>IVA predeterminado</h3>
+            <p>Se aplicará a los nuevos gastos. Los anteriores conservan su valor.</p>
+            <label
+              >Porcentaje de IVA<input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                [(ngModel)]="vatRate"
+              /><span>%</span></label
+            ><button class="primary" (click)="saveVat()">Guardar IVA</button>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <div>
+                <h3>Categorías</h3>
+                <p>Se descargan una vez al día para reducir consultas.</p>
+              </div>
+              <button
+                class="icon-button"
+                title="Actualizar desde Firebase"
+                (click)="refreshCategories()"
+              >
+                ↻ Actualizar
+              </button>
+            </div>
+            @if (data.categoriesFetchedAt()) {
+              <small class="cache-note"
+                >Última carga: {{ data.categoriesFetchedAt() | date: 'dd/MM/yyyy HH:mm' }}</small
+              >
+            }
+            <div class="inline">
+              <input placeholder="Ej. Materiales · Pintura" [(ngModel)]="newCategory" /><button
+                (click)="saveCategory()"
+              >
+                {{ editingCategoryId ? 'Guardar' : 'Añadir' }}
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Categoría</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (category of categories; track category.id) {
+                    <tr>
+                      <td>{{ category.name }}</td>
+                      <td>
+                        <button class="link" (click)="editCategory(category)">Editar</button
+                        ><button class="danger link" (click)="deleteCategory(category)">
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      }
+    </main>
+  </div>
+
+  @if (projectDialog) {
+    <div class="overlay">
+      <form class="modal" (ngSubmit)="saveProject()">
+        <button type="button" class="close" (click)="projectDialog = false">×</button>
+        <h2>{{ editingProjectId ? 'Editar proyecto' : 'Nuevo proyecto' }}</h2>
+        <label>Nombre *<input required [(ngModel)]="projectDraft.name" name="pname" /></label
+        ><label>Ubicación<input [(ngModel)]="projectDraft.location" name="plocation" /></label
+        ><label
+          >Presupuesto *<input
+            type="number"
+            min="1"
+            [(ngModel)]="projectDraft.budget"
+            name="pbudget" /></label
+        ><label
+          >Estado<select [(ngModel)]="projectDraft.status" name="pstatus">
+            <option value="ACTIVE">Activo</option>
+            <option value="PAUSED">Pausado</option>
+            <option value="COMPLETED">Completado</option>
+          </select></label
+        ><button class="primary" type="submit">Guardar proyecto</button>
+      </form>
+    </div>
+  }
+
+  @if (expenseDialog) {
+    <div class="overlay">
+      <form class="modal expense-modal" (ngSubmit)="saveExpense()">
+        <button type="button" class="close" (click)="expenseDialog = false">×</button>
+        <div class="modal-heading">
+          <span class="eyebrow">MOVIMIENTO DE OBRA</span>
+          <h2>{{ editingExpenseId ? 'Editar gasto' : 'Registrar gasto' }}</h2>
+          <p>Registra la factura y ajusta el IVA específico de esta compra.</p>
+        </div>
+
+        <div class="expense-form-grid">
+          <label
+            >Proyecto activo *<select required [(ngModel)]="expenseDraft.projectId" name="eproject">
+              @for (project of activeProjects; track project.id) {
+                <option [value]="project.id">{{ project.name }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Fecha del gasto *<input
+              type="date"
+              required
+              [(ngModel)]="expenseDraft.date"
+              name="edate"
+          /></label>
+          <label class="field-wide"
+            >Descripción del artículo o servicio *<input
+              required
+              placeholder="Ej. Cemento, hierro o mano de obra"
+              [(ngModel)]="expenseDraft.description"
+              name="edescription"
+          /></label>
+          <label
+            >Categoría *<input
+              required
+              list="category-options"
+              placeholder="Buscar categoría"
+              [(ngModel)]="expenseDraft.category"
+              name="ecategory" />
+            <datalist id="category-options">
+              @for (category of categories; track category.id) {
+                <option [value]="category.name"></option>
+              }</datalist
+          ></label>
+          <label
+            >Proveedor<select [(ngModel)]="expenseDraft.provider" name="eprovider">
+              <option value="">Sin proveedor</option>
+              @for (supplier of suppliers; track supplier.id) {
+                <option [value]="supplier.name">{{ supplier.name }}</option>
+              }
+            </select></label
+          >
+          <label class="field-wide"
+            >Número de factura<input
+              placeholder="Ej. 001-020-000380000"
+              [(ngModel)]="expenseDraft.invoiceNumber"
+              name="einvoice"
+          /></label>
+        </div>
+
+        <section class="amount-card">
+          <div class="amount-card-title">
+            <div>
+              <b>Valores de la compra</b><small>El cálculo se actualiza automáticamente.</small>
+            </div>
+            <span>USD</span>
+          </div>
+          <div class="amount-grid">
+            <label
+              >Cantidad<input
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                [(ngModel)]="expenseDraft.quantity"
+                name="equantity"
+                (ngModelChange)="recalculate()"
+            /></label>
+            <label
+              >Precio unitario<input
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                [(ngModel)]="expenseDraft.unitPrice"
+                name="eprice"
+                (ngModelChange)="recalculate()"
+            /></label>
+            <div class="vat-editor">
+              <div class="vat-label">
+                <b>IVA de este gasto</b><small>Editable; no modifica otras compras.</small>
+              </div>
+              <div class="vat-controls">
+                <div class="rate-buttons" aria-label="Tasas frecuentes">
+                  <button
+                    type="button"
+                    [class.active]="expenseDraft.taxRate === 0"
+                    (click)="setExpenseTaxRate(0)"
+                  >
+                    0%
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="expenseDraft.taxRate === 5"
+                    (click)="setExpenseTaxRate(5)"
+                  >
+                    5%
+                  </button>
+                  <button
+                    type="button"
+                    [class.active]="expenseDraft.taxRate === 15"
+                    (click)="setExpenseTaxRate(15)"
+                  >
+                    15%
+                  </button>
+                </div>
+                <label class="custom-rate"
+                  ><input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    [(ngModel)]="expenseDraft.taxRate"
+                    name="etax"
+                    (ngModelChange)="recalculate()"
+                  /><span>%</span></label
+                >
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="total total-cards">
+          <span
+            ><small>Subtotal</small><b>{{ money(expenseDraft.subtotal) }}</b></span
+          >
+          <span
+            ><small>IVA {{ expenseDraft.taxRate }}%</small
+            ><b>{{ money(expenseDraft.tax) }}</b></span
+          >
+          <strong><small>Total a registrar</small>{{ money(expenseDraft.total) }}</strong>
+        </div>
+        <div class="modal-actions">
+          <button type="button" (click)="expenseDialog = false">Cancelar</button>
+          <button class="primary" type="submit">
+            {{ editingExpenseId ? 'Guardar cambios' : 'Guardar gasto' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (supplierDialog) {
+    <div class="overlay">
+      <form class="modal" (ngSubmit)="saveSupplier()">
+        <button type="button" class="close" (click)="supplierDialog = false">×</button>
+        <h2>{{ editingSupplierId ? 'Editar proveedor' : 'Nuevo proveedor' }}</h2>
+        <p class="modal-intro">Estos datos estarán disponibles en el selector de gastos.</p>
+        <label>Nombre *<input required [(ngModel)]="supplierDraft.name" name="sname" /></label>
+        <label
+          >Persona de contacto<input [(ngModel)]="supplierDraft.contact" name="scontact"
+        /></label>
+        <label>Teléfono<input type="tel" [(ngModel)]="supplierDraft.phone" name="sphone" /></label>
+        <button class="primary" type="submit">Guardar proveedor</button>
+      </form>
+    </div>
+  }
+}
