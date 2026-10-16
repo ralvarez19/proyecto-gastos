@@ -1,0 +1,90 @@
+# Codex/local working files
+.codex_tmp/
+.runtime/
+
+# Generated deliverables and reports
+dist/
+outputs/
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/build/
+**/coverage/
+apps/mobile/android/local.properties
+apps/mobile/ios/Flutter/ephemeral/
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+
+# Angular / Node
+**/node_modules/
+apps/web/dist/
+apps/web/.angular/
+apps/web/coverage/
+apps/web/firestore-debug.log
+apps/web/firebase-debug.log
+apps/web/npm-debug.log*
+
+# IDE / operating system
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Signing keys and private administrative credentials
+*.jks
+*.keystore
+**/service-account*.json
+**/*adminsdk*.json
+
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# Angular / Node
+node_modules/
+.angular/
+dist/
+.npm/
+*.tsbuildinfo
+
+# Generated files
+outputs/
+.codex_tmp/
+.runtime/
+*.log
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+**/local.properties
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+
+# Firebase administrative credentials
+**/service-account*.json
+**/*adminsdk*.json
+apps/web/.git-backup/
